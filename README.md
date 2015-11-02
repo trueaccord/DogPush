@@ -25,9 +25,16 @@ Excellent question. So many reasons:
 
 Run `pip install dogpush`
 
-## Via docker
+## Via Docker
 
 Run `docker pull trueaccord/dogpush`
+
+To run, you need ot make your configuration files accessible to the container.
+Use a command like this:
+
+```
+docker run --rm -v /path/to/config:/config trueaccord/dogpush -c /config/config.yaml diff
+```
 
 ## Getting Started
 
