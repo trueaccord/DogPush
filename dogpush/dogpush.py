@@ -146,6 +146,8 @@ def get_local_monitors():
     l = CONFIG.get('rule_files', [])
     monitors = []
     for filename in l:
+        filename = filename if os.path.isabs(filename) else os.path.join(
+                CONFIG_DIR, filename)
         with open(filename, 'r') as f:
             r = yaml.load(f)
             if r is None:
@@ -182,6 +184,14 @@ def _is_changed(local, remote):
         remote['obj']['options'].pop('silenced', None)
 
     return local['obj'] != remote['obj']
+
+
+def command_init():
+    remote_monitors = [m['obj'] for m in get_datadog_monitors().values()]
+    monitors = {'alerts': remote_monitors}
+    print '# team: TEAMNAME'
+    print
+    print _pretty_yaml(monitors)
 
 
 def command_push():
@@ -324,10 +334,15 @@ parser = argparse.ArgumentParser(
 
 
 parser.add_argument('--config', '-c',
-                    default=os.path.join(SCRIPT_DIR, 'config.yaml'),
+                    default=os.path.join('.', 'config.yaml'),
                     help='configuration file to load')
 
 subparsers = parser.add_subparsers(help='sub-command help')
+
+
+parser_push = subparsers.add_parser(
+    'init', help='init new alerts file')
+parser_push.set_defaults(command=command_init)
 
 
 parser_push = subparsers.add_parser(
@@ -343,12 +358,13 @@ parser_diff.set_defaults(command=command_diff)
 
 parser_mute = subparsers.add_parser(
     'mute',
-    help='Mute business-hours-only alerts if it is not business hours')
+    help='Mute alerts based on their `mute_when` key')
 parser_mute.set_defaults(command=command_mute)
 args = parser.parse_args()
 
 
 CONFIG = _load_config(args.config)
+CONFIG_DIR = os.path.abspath(os.path.dirname(args.config))
 
 
 def main():
@@ -358,3 +374,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

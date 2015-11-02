@@ -6,5 +6,5 @@ RUN pip install -r /requirements.txt
 
 ADD . /
 
-ENTRYPOINT ["/dogpush.py"]
+ENTRYPOINT ["/dogpush/dogpush.py"]
 

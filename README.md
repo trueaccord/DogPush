@@ -19,23 +19,150 @@ Excellent question. So many reasons:
   is only active during business hours.  With DogPush it is really easy using
   `mute_tags`.
 
+## Installation
+
+## Via PIP
+
+Run `pip install dogpush`
+
+## Via docker
+
+Run `docker pull trueaccord/dogpush`
+
+## Getting started
+
+Go to [DataDog API settings](https://app.datadoghq.com/account/settings#api)
+and generate an API key and application key.  Create a minimal config.yaml
+that looks like this:
+
+```
+---
+datadog:
+  api_key: YOUR_API_KEY
+  app_key: YOUR_APP_KEY
+```
+
+Then run `dogpush -c ./config.yaml diff` and all the alerts you currently
+have on datadog will appear as untracked.
+
+The next step would be to create your initial alets file:
+
+```
+dogpush -c ./config.yaml init > ./my_monitors.yaml
+```
+
+Now, add `my_monitors.yaml` as a rules_file to `config.yaml`. Edit
+`config.yaml` again:
+
+```
+---
+datadog:
+  api_key: YOUR_API_KEY
+  app_key: YOUR_APP_KEY
+
+rule_files:
+- my_monitors.yaml
+```
+
+Now, run `dogpush diff` again, and see that the difference will be empty. Your
+local rules are in sync with your DataDog rules.  If you have a lot of rules,
+You may split your initial rules file to multiple files (by category, or
+team), and include all of them in the `rule_files` section.  Paths can be
+either relative to the config file or absolute.
+
+```
+rule_files:
+- rds.yaml
+- ec2.yaml
+- dir1/rules.yaml
+- /absolute/path/to/rules.yaml
+```
+
 ## Config file
 
-DogPush config file defines  up the DataDog api and app keys. If they are not
+DogPush config file defines up the DataDog api and app keys. If they are not
 specified in the file DogPush looks for these in environment variables named
 `DATADOG_API_KEY` and `DATADOG_APP_KEY`.
 
 The file defines the teams and how to alert your team at different severity
 levels.
 
-See `config-sample.yaml` for a full reference.
+### The teams section
+
+Teams in DogPush are just a way to append some text to the message body of a
+monitor so it will grab the attention of the right people.  By defining your
+teams in the global config, it is super easy to add these @-mentions to all
+your monitors. For example,
+```
+teams:
+  eng:
+    notifications:
+      CRITICAL: '@hipchat-Engineering @victorops-eng'
+      WARNING: '@eng-alerts@example.com'
+  ops:
+    notifications:
+      CRITICAL: '@hipchat-Ops'
+```
+
+means that any monitor of severity `CRITICAL` to the `eng` team will have the
+'@hipchat-Engineering @victorops-eng' appending to its message body.
+
+Then, in a rules file, you can have a top level `team` setting (making all
+the alerts automatically go to that team), or specify 'team' at the alert
+level.
+
+The default severity is `CRITICAL`, and you can override the severity in each
+monitor by using the `severity` key.
+
+### Muting alerts based on time windows
+
+DogPush supports automatically muting alerts. A common use case is to mute
+non critical alerts outside business hours. First, define the time window like
+this:
+```
+mute_tags:
+  not_business_hours:
+    timezone: US/Pacific
+    expr: now.hour < 9 or now.hour >= 17 or (now.weekday() in (5, 6))
+```
+
+This defines `not_business_hours` period. The period is defined using a
+`timezone` and a Python expression.  The expression provides a `now` variable
+of type [datetime.datetime](https://docs.python.org/2/library/datetime.html#datetime.datetime)
+and should return True when `now` falls in a time where the monitor should be
+muted.  In this example, not_business_hours is defined as before 9am or after
+5pm or anytime during the weekend. The `timezone` key specifies in which
+timezone should the `now` be localized to.  (all the internal time
+calculations in DogPush are done in UTC regardless of the system's default
+timezone).
+
+After defining `mute_tags`, you can apply `mute_when: not_business_hours` to
+rules in your rules file.  Also read about `dogpush mute` to learn how to
+automatically mute these alerts.
+
+See `config-sample.yaml` for a full example.
 
 ## Rule files
+
+On the top of a rules file you can define `team: xyz` to define the default
+team for all the alerts in the file. You can override the team by specifying a
+different team in an alert.
+
+**Tip 1:** it is possible to use a list of teams instead of a single team.
+
+**Tip 2:** if you would like to have a monitor without any team associated
+with it, you can use `team: []` in that monitor. This will override the file's
+default team settings with an empty list.
 
 The config file references your rule files.  See `rds.yaml` for an example
 rule file.
 
 ## Available commands
+
+### dogpush init
+
+Prints an initial rules file so you can get started quickly with your existing
+rules.
 
 ### dogpush diff
 
