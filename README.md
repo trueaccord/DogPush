@@ -29,7 +29,7 @@ Run `pip install dogpush`
 
 Run `docker pull trueaccord/dogpush`
 
-## Getting started
+## Getting Started
 
 Go to [DataDog API settings](https://app.datadoghq.com/account/settings#api)
 and generate an API key and application key.  Create a minimal config.yaml
@@ -77,6 +77,9 @@ rule_files:
 - dir1/rules.yaml
 - /absolute/path/to/rules.yaml
 ```
+
+Now you can make changes to your rule files. See the changes by running
+`dogpush diff`, and push them using `dogpush push`.
 
 ## Config file
 
