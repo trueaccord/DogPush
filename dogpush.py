@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import argparse
+import calendar
 import copy
 import datetime
 import difflib
@@ -18,10 +19,6 @@ import bcolors
 
 
 PROGNAME = 'dogpush'
-
-US_PACIFIC = pytz.timezone('US/Pacific')
-
-EPOCH = US_PACIFIC.localize(datetime.datetime.fromtimestamp(0))
 
 
 class DogPushException(Exception):
@@ -58,7 +55,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 # Datadog fields we do not store locally.
 IGNORE_FIELDS = ['created_at', 'creator', 'org_id', 'overall_state', 'id',
                  # dogpush specific:
-                 'business_hours_only', 'team', 'severity']
+                 'mute_when', 'team', 'severity']
 
 # Datadog fields that we do not store in our monitor rules if they have the
 # default value.
@@ -79,10 +76,6 @@ def _pretty_yaml(d):
     return re.sub('^-', '\n-', yaml.dump(d), flags=re.M)
 
 
-def current_time():
-    return datetime.datetime.now(US_PACIFIC)
-
-
 # Transform a monitor to a canonical form by removing defaults
 def _canonical_monitor(original, default_team=None, **kwargs):
     m = copy.deepcopy(original)
@@ -90,7 +83,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         del m['tags']
     for field in IGNORE_FIELDS:
         m.pop(field, None)
-    all_defaults = (DATADOG_DEFAULT_OPTIONS.items() + 
+    all_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
                     CONFIG['default_rule_options'].items())
     for (field, value) in all_defaults:
         if field in m['options'] and m['options'][field] == value:
@@ -111,7 +104,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         name = m['name'],
         id = original.get('id'),
         obj = m,
-        business_hours_only = original.get('business_hours_only')
+        mute_when = original.get('mute_when')
     )
     result.update(kwargs)
     return result
@@ -183,9 +176,9 @@ def _prepare_monitor(m):
 
 
 def _is_changed(local, remote):
-    # For a business hours only alert, we ignore silencing when comparing.
+    # For an alert with `mute_when`, we ignore silencing when comparing.
     # TODO(nadavsr): rethink how silencing should affect monitors in general.
-    if local['business_hours_only']:
+    if local['mute_when']:
         remote['obj']['options'].pop('silenced', None)
 
     return local['obj'] != remote['obj']
@@ -212,40 +205,56 @@ def command_push():
                 **_prepare_monitor(local_monitors[name]))
 
 
-def _is_business_hours(now = None):
-    now = now or current_time()
-    return (9 <= now.hour <= 15) and (now.weekday() not in (5, 6))
+def _should_mute(expr, tz, now):
+    return eval(expr, {}, {'now': now.astimezone(tz)})
 
 
-def _next_business_hour(now = None):
-    """Returns the next time it is business hours."""
-    # Adds one hour until _is_business_hours() return true.  This is
-    # actually pretty fast (less than 1ms), and avoids complex calculation.
-    start = now = now or current_time()
+def _mute_until(expr, tz, now):
+    """Returns the earliest time the given expression returns false."""
+    # Adds one hour until `expr` return true.  This is
+    # actually pretty fast (less than 1ms), and provides a good way to avoid
+    # avoids a more complex calcuation.
+    start = now
     one_hour = datetime.timedelta(hours=1)
-    while not _is_business_hours(now):
+    while _should_mute(expr, tz, now=now):
         now += one_hour
     # Round to the start of the hour.
     if start != now:
-        now -= datetime.timedelta(minutes=now.minute, seconds=now.second)
+        now -= datetime.timedelta(minutes=now.minute,
+                                  seconds=now.second,
+                                  microseconds=now.microsecond)
     return now
 
 
 def command_mute():
     local_monitors = get_local_monitors()
     remote_monitors = get_datadog_monitors()
-    if _is_business_hours():
-        print "It is business hours now. Nothing to do."
-    timestamp = (_next_business_hour() - EPOCH).total_seconds()
+    mute_tags = {}
+
+    now = datetime.datetime.now(pytz.UTC)
+    for tag_key, tag_value in CONFIG.get('mute_tags', {}).items():
+        tz = pytz.timezone(tag_value['timezone'])
+        if _should_mute(tag_value['expr'], tz, now):
+            next_active_time = _mute_until(tag_value['expr'], tz, now)
+            mute_tags[tag_key] = {
+                'datetime': next_active_time.astimezone(tz),
+                'timestamp': calendar.timegm(next_active_time.timetuple())
+            }
+        else:
+            mute_tags[tag_key] = None
 
     for monitor in local_monitors.values():
-        if monitor['business_hours_only']:
+        if monitor['mute_when']:
             remote = remote_monitors[monitor['name']]
             if 'silenced' in remote['obj']['options']:
-                print "Alert '%s' already muted. Skipping." % monitor['name']
-            else:
+                print "Alert '%s' is already muted. Skipping." % monitor['name']
+                continue
+            mute_until = mute_tags[monitor['mute_when']]
+            if mute_until:
                 id = remote['id']
-                datadog.api.Monitor.mute(id, end=timestamp)
+                datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
+                print "Muting alert '%s' until %s" % (monitor['name'],
+                                                      mute_until['datetime'])
 
 
 def command_diff():
@@ -314,7 +323,7 @@ parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 
-parser.add_argument('--config', '-c', 
+parser.add_argument('--config', '-c',
                     default=os.path.join(SCRIPT_DIR, 'config.yaml'),
                     help='configuration file to load')
 

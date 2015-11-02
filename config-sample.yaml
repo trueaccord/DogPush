@@ -1,0 +1,22 @@
+---
+datadog:
+  api_key: YOUR_DATADOG_API_KEY
+  app_key: YOUR_DATADOG_APP_KEY
+
+teams:
+  eng:
+    notifications:
+      CRITICAL: '@hipchat-Engineering @victorops-eng'
+      WARNING: '@eng-alerts@example.com'
+  ops:
+    notifications:
+      CRITICAL: '@hipchat-Ops'
+
+mute_tags:
+  not_business_hours:
+    timezone: US/Pacific
+    expr: now.hour < 9 or now.hour >= 17 or (now.weekday() in (5, 6))
+
+rule_files:
+- rds.yaml
+
