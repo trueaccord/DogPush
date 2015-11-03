@@ -169,7 +169,7 @@ def get_local_monitors():
 
 def _prepare_monitor(m):
     obj = copy.deepcopy(m['obj'])
-    for (key, value) in CONFIG['default_rule_options']:
+    for (key, value) in CONFIG['default_rule_options'].items():
         if 'options' not in obj:
             obj['options'] = {}
         if key not in obj['options']:
