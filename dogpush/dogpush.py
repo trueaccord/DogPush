@@ -58,6 +58,8 @@ IGNORE_FIELDS = ['created_at', 'created', 'modified', 'creator',
                  # dogpush specific:
                  'mute_when', 'team', 'severity']
 
+IGNORE_OPTIONS = ['silenced']
+
 # Datadog fields that we do not store in our monitor rules if they have the
 # default value.
 # There are two type of defaults: defaults coming from TrueAccord (all
@@ -84,6 +86,8 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         del m['tags']
     for field in IGNORE_FIELDS:
         m.pop(field, None)
+    for field in IGNORE_OPTIONS:
+        m['options'].pop(field, None)
     all_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
                     CONFIG['default_rule_options'].items())
     for (field, value) in all_defaults:
@@ -105,7 +109,8 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         name = m['name'],
         id = original.get('id'),
         obj = m,
-        mute_when = original.get('mute_when')
+        mute_when = original.get('mute_when'),
+        is_silenced = bool(original['options'].get('silenced'))
     )
     result.update(kwargs)
     return result
@@ -113,6 +118,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 
 def get_datadog_monitors():
     monitors = datadog.api.Monitor.get_all()
+    print monitors
     if not _check_monitor_names_unique(monitors):
         raise DataDogException(
             'Duplicate names found in remote datadog monitors.')
@@ -257,7 +263,7 @@ def command_mute():
     for monitor in local_monitors.values():
         if monitor['mute_when']:
             remote = remote_monitors[monitor['name']]
-            if 'silenced' in remote['obj']['options']:
+            if remote['is_silenced']:
                 print "Alert '%s' is already muted. Skipping." % monitor['name']
                 continue
             mute_until = mute_tags[monitor['mute_when']]
