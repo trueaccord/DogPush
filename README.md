@@ -2,7 +2,7 @@
 
 DogPush enables to manage your DataDog monitors in YAML files.
 
-## Why would I want ot manage my monitors in YAML files?
+## Why would I want to manage my monitors in YAML files?
 
 Excellent question. So many reasons:
 
