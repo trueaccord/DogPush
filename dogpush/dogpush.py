@@ -66,11 +66,12 @@ IGNORE_OPTIONS = ['silenced']
 # our rules get these values by default) and defaults coming from DataDog.
 LOCAL_DEFAULT_RULE_OPTIONS = {
   'notify_no_data': True,
-  'renotify_interval': 15
+  'renotify_interval': 15,
 }
 
 DATADOG_DEFAULT_OPTIONS = {
   'notify_audit': False,
+  'locked': False,
   'silenced': {}
 }
 
