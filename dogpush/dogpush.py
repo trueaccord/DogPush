@@ -27,7 +27,7 @@ class DogPushException(Exception):
 
 def _load_config(config_file):
     with open(config_file, 'r') as f:
-        config = yaml.load(f)
+        config = yaml.safe_load(f)
     if 'teams' not in config:
         config['teams'] = {}
     if 'datadog' not in config:
@@ -156,7 +156,7 @@ def get_local_monitors():
         filename = filename if os.path.isabs(filename) else os.path.join(
                 CONFIG_DIR, filename)
         with open(filename, 'r') as f:
-            r = yaml.load(f)
+            r = yaml.safe_load(f)
             if r is None:
                 r = {alerts: []}
             if not isinstance(r, dict):
