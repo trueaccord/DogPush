@@ -75,7 +75,7 @@ Now, run `dogpush diff` again, and see that the difference will be empty. Your
 local rules are in sync with your DataDog rules.  If you have a lot of rules,
 You may split your initial rules file to multiple files (by category, or
 team), and include all of them in the `rule_files` section.  Paths can be
-either relative to the config file or absolute.
+either relative to the config file or absolute. Paths may contain wildcards.
 
 ```
 rule_files:
@@ -83,6 +83,7 @@ rule_files:
 - ec2.yaml
 - dir1/rules.yaml
 - /absolute/path/to/rules.yaml
+- path/with/wildcard/*.yaml
 ```
 
 Now you can make changes to your rule files. See the changes by running
@@ -202,4 +203,3 @@ period described by `mute_when` is over.  This command can be run
 from a cron job to ensure monitors are silenced at the right times. As the
 mute automatically expires, there is no need to run anything to unmute the
 alerts.
-
