@@ -85,6 +85,13 @@ rule_files:
 - /absolute/path/to/rules.yaml
 ```
 
+Alternatively, you can specify a directory for your rules, and all YAML files
+within that directory will be included.
+
+```
+rule_directory: my_rules/
+```
+
 Now you can make changes to your rule files. See the changes by running
 `dogpush diff`, and push them using `dogpush push`.
 
@@ -202,4 +209,3 @@ period described by `mute_when` is over.  This command can be run
 from a cron job to ensure monitors are silenced at the right times. As the
 mute automatically expires, there is no need to run anything to unmute the
 alerts.
-

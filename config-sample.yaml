@@ -20,3 +20,5 @@ mute_tags:
 rule_files:
 - rds.yaml
 
+# Optionally specify a directory of rule YAML files:
+# rule_directory: rules/
