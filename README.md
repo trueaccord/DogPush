@@ -75,7 +75,7 @@ Now, run `dogpush diff` again, and see that the difference will be empty. Your
 local rules are in sync with your DataDog rules.  If you have a lot of rules,
 You may split your initial rules file to multiple files (by category, or
 team), and include all of them in the `rule_files` section.  Paths can be
-either relative to the config file or absolute.
+either relative to the config file or absolute. Paths may contain wildcards.
 
 ```
 rule_files:
@@ -83,13 +83,7 @@ rule_files:
 - ec2.yaml
 - dir1/rules.yaml
 - /absolute/path/to/rules.yaml
-```
-
-Alternatively, you can specify a directory for your rules, and all YAML files
-within that directory will be included.
-
-```
-rule_directory: my_rules/
+- path/with/wildcard/*.yaml
 ```
 
 Now you can make changes to your rule files. See the changes by running

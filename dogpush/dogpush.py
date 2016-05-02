@@ -5,7 +5,7 @@ import calendar
 import copy
 import datetime
 import difflib
-import json
+import glob
 import os
 import re
 import sys
@@ -120,7 +120,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 def get_datadog_monitors():
     monitors = datadog.api.Monitor.get_all()
     if not _check_monitor_names_unique(monitors):
-        raise DataDogException(
+        raise DogPushException(
             'Duplicate names found in remote datadog monitors.')
     result = {}
     for m in monitors:
@@ -148,41 +148,30 @@ def _check_monitor(monitor, location):
     if not name:
         raise DogPushException('%s: found monitor without a name' % location)
 
-def _read_monitor_file(filename):
-    monitors = []
-    with open(filename, 'r') as f:
-        r = yaml.safe_load(f)
-        if r is None:
-            r = {alerts: []}
-        if not isinstance(r, dict):
-            raise DogPushException("Expected a dictionary")
-        if not isinstance(r.get('alerts'), list):
-            raise DogPushException("'alerts' must be a list of alerts.")
-        default_team = r.get('team')
-        for monitor in r['alerts']:
-            _check_monitor(monitor, filename)
-            monitors.append(_canonical_monitor(monitor, filename=filename,
-                                               default_team=default_team))
-    return monitors
-
 
 def get_local_monitors():
-    l = CONFIG.get('rule_files', [])
     monitors = []
-    for filename in l:
-        filename = filename if os.path.isabs(filename) else os.path.join(
-                CONFIG_DIR, filename)
-        monitors += _read_monitor_file(filename)
-    rule_directory = CONFIG.get('rule_directory')
-    if rule_directory:
-        if not os.path.isabs(rule_directory):
-            rule_directory = os.path.join(CONFIG_DIR, rule_directory)
-        for filename in os.listdir(rule_directory):
-            if filename.endswith('.yml') or filename.endswith('.yaml'):
-                filename = os.path.join(rule_directory, filename)
-                monitors += _read_monitor_file(filename)
+    for globname in CONFIG.get('rule_files', []):
+        if not os.path.isabs(globname):
+            globname = os.path.join(CONFIG_DIR, globname)
+        for filename in glob.glob(globname):
+            with open(filename, 'r') as f:
+                r = yaml.safe_load(f)
+                if r is None:
+                    r = {'alerts': []}
+                if not isinstance(r, dict):
+                    raise DogPushException("Expected a dictionary")
+                if not isinstance(r.get('alerts'), list):
+                    raise DogPushException("'alerts' must be a list of alerts.")
+                default_team = r.get('team')
+                for monitor in r['alerts']:
+                    _check_monitor(monitor, filename)
+                    monitor = _canonical_monitor(monitor,
+                                                 filename=filename,
+                                                 default_team=default_team)
+                    monitors.append(monitor)
     if not _check_monitor_names_unique(monitors):
-        raise DataDogException('Duplicate names found in local monitors.')
+        raise DogPushException('Duplicate names found in local monitors.')
     result = dict((m['name'], m) for m in monitors)
     return result
 
