@@ -36,6 +36,7 @@ def _load_config(config_file):
             'app_key', os.getenv('DATADOG_APP_KEY'))
     config['datadog']['api_key'] = config['datadog'].get(
             'api_key', os.getenv('DATADOG_API_KEY'))
+    config['datadog']['mute'] = config['datadog'].get('mute', False)
     if 'default_rule_options' not in config:
         config['default_rule_options'] = LOCAL_DEFAULT_RULE_OPTIONS
 
