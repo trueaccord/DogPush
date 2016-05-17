@@ -104,7 +104,9 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         if m.get(field) == value:
             del m[field]
     # If options is {'thresholds': {'critical': x}}, then it is redundant.
-    if m.get('options', {}).keys() == ['thresholds'] and m['options']['thresholds'].keys() == ['critical']:
+    if not m.get('options'):
+        m.pop('options', None)
+    elif m['options'].keys() == ['thresholds'] and m['options']['thresholds'].keys() == ['critical']:
         del m['options']
     m['name'] = m['name'].strip()
     original_team = original.get('team')
