@@ -194,6 +194,8 @@ def _prepare_monitor(m):
         obj['options'] = obj.get('options', {})
         if key not in obj['options']:
             obj['options'][key] = value
+    for (key, value) in CONFIG['default_rules'].items():
+        obj[key] = obj.get(key, value)
     return obj
 
 
