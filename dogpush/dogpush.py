@@ -37,9 +37,10 @@ def _load_config(config_file):
     config['datadog']['api_key'] = config['datadog'].get(
             'api_key', os.getenv('DATADOG_API_KEY'))
     config['datadog']['mute'] = config['datadog'].get('mute', False)
-    if 'default_rule_options' not in config:
-        config['default_rule_options'] = LOCAL_DEFAULT_RULE_OPTIONS
-
+    config['default_rule_options'] = config.get(
+        'default_rule_options', LOCAL_DEFAULT_RULE_OPTIONS)
+    config['default_rules'] = config.get(
+        'default_rules', DATADOG_DEFAULT_RULES)
     # Ensure the keys of the above two groups are disjoint.
     assert(set(config['default_rule_options'].keys()) &
            set(DATADOG_DEFAULT_OPTIONS.keys()) == set())
@@ -76,6 +77,10 @@ DATADOG_DEFAULT_OPTIONS = {
   'silenced': {}
 }
 
+DATADOG_DEFAULT_RULES = {
+  'multi': False,
+  'type': 'metric alert'
+}
 
 def _pretty_yaml(d):
     return re.sub('^-', '\n-', yaml.dump(d), flags=re.M)
@@ -90,11 +95,14 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         m.pop(field, None)
     for field in IGNORE_OPTIONS:
         m['options'].pop(field, None)
-    all_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
-                    CONFIG['default_rule_options'].items())
-    for (field, value) in all_defaults:
-        if field in m['options'] and m['options'][field] == value:
+    option_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
+                       CONFIG['default_rule_options'].items())
+    for (field, value) in option_defaults:
+        if m['options'].get(field) == value:
             del m['options'][field]
+    for (field, value) in CONFIG['default_rules'].items():
+        if m.get(field) == value:
+            del m[field]
     m['name'] = m['name'].strip()
     original_team = original.get('team')
     team = original_team if original_team is not None else default_team

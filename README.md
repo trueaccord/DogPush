@@ -42,7 +42,7 @@ Go to [DataDog API settings](https://app.datadoghq.com/account/settings#api)
 and generate an API key and application key.  Create a minimal config.yaml
 that looks like this:
 
-```
+```yaml
 ---
 datadog:
   api_key: YOUR_API_KEY
@@ -61,7 +61,7 @@ dogpush -c ./config.yaml init > ./my_monitors.yaml
 Now, add `my_monitors.yaml` as a rules_file to `config.yaml`. Edit
 `config.yaml` again:
 
-```
+```yaml
 ---
 datadog:
   api_key: YOUR_API_KEY
@@ -77,7 +77,7 @@ You may split your initial rules file to multiple files (by category, or
 team), and include all of them in the `rule_files` section.  Paths can be
 either relative to the config file or absolute. Paths may contain wildcards.
 
-```
+```yaml
 rule_files:
 - rds.yaml
 - ec2.yaml
@@ -98,13 +98,30 @@ specified in the file DogPush looks for these in environment variables named
 The file defines the teams and how to alert your team at different severity
 levels.
 
+### Rule Defaults
+
+Your config can optionally define two values to specify defaults.
+`default_rules` can be used to specify defaults for the top level values of
+rules, such as `multi` and `message`. `default_rule_options` can be used to
+specify default values for the `options` section of rules, such as `locked` or
+`notify_audit`. All of these values are automatically filled in for every rule
+you define, but can always be overridden per-rule. For example,
+
+```yaml
+default_rules:
+  multi: False
+default_rule_options:
+  notify_audit: True
+  locked: True
+```
+
 ### The teams section
 
 Teams in DogPush are just a way to append some text to the message body of a
 monitor so it will grab the attention of the right people.  By defining your
 teams in the global config, it is super easy to add these @-mentions to all
 your monitors. For example,
-```
+```yaml
 teams:
   eng:
     notifications:
@@ -130,7 +147,7 @@ monitor by using the `severity` key.
 DogPush supports automatically muting alerts. A common use case is to mute
 non critical alerts outside business hours. First, define the time window like
 this:
-```
+```yaml
 mute_tags:
   not_business_hours:
     timezone: US/Pacific
