@@ -94,15 +94,18 @@ def _canonical_monitor(original, default_team=None, **kwargs):
     for field in IGNORE_FIELDS:
         m.pop(field, None)
     for field in IGNORE_OPTIONS:
-        m['options'].pop(field, None)
+        m.get('options', {}).pop(field, None)
     option_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
                        CONFIG['default_rule_options'].items())
     for (field, value) in option_defaults:
-        if m['options'].get(field) == value:
+        if m.get('options', {}).get(field) == value:
             del m['options'][field]
     for (field, value) in CONFIG['default_rules'].items():
         if m.get(field) == value:
             del m[field]
+    # If options is {'thresholds': {'critical': x}}, then it is redundant.
+    if m.get('options', {}).keys() == ['thresholds'] and m['options']['thresholds'].keys() == ['critical']:
+        del m['options']
     m['name'] = m['name'].strip()
     original_team = original.get('team')
     team = original_team if original_team is not None else default_team
@@ -120,7 +123,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         id = original.get('id'),
         obj = m,
         mute_when = original.get('mute_when'),
-        is_silenced = bool(original['options'].get('silenced'))
+        is_silenced = bool(original.get('options', {}).get('silenced'))
     )
     result.update(kwargs)
     return result
@@ -188,8 +191,7 @@ def get_local_monitors():
 def _prepare_monitor(m):
     obj = copy.deepcopy(m['obj'])
     for (key, value) in CONFIG['default_rule_options'].items():
-        if 'options' not in obj:
-            obj['options'] = {}
+        obj['options'] = obj.get('options', {})
         if key not in obj['options']:
             obj['options'][key] = value
     return obj
@@ -199,7 +201,7 @@ def _is_changed(local, remote):
     # For an alert with `mute_when`, we ignore silencing when comparing.
     # TODO(nadavsr): rethink how silencing should affect monitors in general.
     if local['mute_when']:
-        remote['obj']['options'].pop('silenced', None)
+        remote['obj'].get('options', {}).pop('silenced', None)
 
     return local['obj'] != remote['obj']
 
