@@ -37,9 +37,10 @@ def _load_config(config_file):
     config['datadog']['api_key'] = config['datadog'].get(
             'api_key', os.getenv('DATADOG_API_KEY'))
     config['datadog']['mute'] = config['datadog'].get('mute', False)
-    if 'default_rule_options' not in config:
-        config['default_rule_options'] = LOCAL_DEFAULT_RULE_OPTIONS
-
+    config['default_rule_options'] = config.get(
+        'default_rule_options', LOCAL_DEFAULT_RULE_OPTIONS)
+    config['default_rules'] = config.get(
+        'default_rules', DATADOG_DEFAULT_RULES)
     # Ensure the keys of the above two groups are disjoint.
     assert(set(config['default_rule_options'].keys()) &
            set(DATADOG_DEFAULT_OPTIONS.keys()) == set())
@@ -76,6 +77,10 @@ DATADOG_DEFAULT_OPTIONS = {
   'silenced': {}
 }
 
+DATADOG_DEFAULT_RULES = {
+  'multi': False,
+  'type': 'metric alert'
+}
 
 def _pretty_yaml(d):
     return re.sub('^-', '\n-', yaml.dump(d), flags=re.M)
@@ -89,12 +94,20 @@ def _canonical_monitor(original, default_team=None, **kwargs):
     for field in IGNORE_FIELDS:
         m.pop(field, None)
     for field in IGNORE_OPTIONS:
-        m['options'].pop(field, None)
-    all_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
-                    CONFIG['default_rule_options'].items())
-    for (field, value) in all_defaults:
-        if field in m['options'] and m['options'][field] == value:
+        m.get('options', {}).pop(field, None)
+    option_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
+                       CONFIG['default_rule_options'].items())
+    for (field, value) in option_defaults:
+        if m.get('options', {}).get(field) == value:
             del m['options'][field]
+    for (field, value) in CONFIG['default_rules'].items():
+        if m.get(field) == value:
+            del m[field]
+    # If options is {'thresholds': {'critical': x}}, then it is redundant.
+    if not m.get('options'):
+        m.pop('options', None)
+    elif m['options'].keys() == ['thresholds'] and m['options']['thresholds'].keys() == ['critical']:
+        del m['options']
     m['name'] = m['name'].strip()
     original_team = original.get('team')
     team = original_team if original_team is not None else default_team
@@ -112,7 +125,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         id = original.get('id'),
         obj = m,
         mute_when = original.get('mute_when'),
-        is_silenced = bool(original['options'].get('silenced'))
+        is_silenced = bool(original.get('options', {}).get('silenced'))
     )
     result.update(kwargs)
     return result
@@ -180,10 +193,11 @@ def get_local_monitors():
 def _prepare_monitor(m):
     obj = copy.deepcopy(m['obj'])
     for (key, value) in CONFIG['default_rule_options'].items():
-        if 'options' not in obj:
-            obj['options'] = {}
+        obj['options'] = obj.get('options', {})
         if key not in obj['options']:
             obj['options'][key] = value
+    for (key, value) in CONFIG['default_rules'].items():
+        obj[key] = obj.get(key, value)
     return obj
 
 
@@ -191,7 +205,7 @@ def _is_changed(local, remote):
     # For an alert with `mute_when`, we ignore silencing when comparing.
     # TODO(nadavsr): rethink how silencing should affect monitors in general.
     if local['mute_when']:
-        remote['obj']['options'].pop('silenced', None)
+        remote['obj'].get('options', {}).pop('silenced', None)
 
     return local['obj'] != remote['obj']
 
