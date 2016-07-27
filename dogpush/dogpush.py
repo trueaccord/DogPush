@@ -22,6 +22,13 @@ import bcolors
 PROGNAME = 'dogpush'
 
 
+# To check for unicode strings use basestring for Python 2 and str for Python 3.
+try:
+    basestring
+except NameError:
+    basestring = str
+
+
 class DogPushException(Exception):
     pass
 
@@ -115,7 +122,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
     team = original_team if original_team is not None else default_team
     severity = original.get('severity') or 'CRITICAL'
     if team:
-        if isinstance(team, str):
+        if isinstance(team, basestring):
             team = [team]
         m['message'] = m.get('message', '')
         for t in team:
@@ -159,7 +166,7 @@ def _check_monitor_names_unique(monitors):
 
 def _check_monitor(monitor, location):
     name = monitor.get('name', '')
-    if isinstance(name, str):
+    if isinstance(name, basestring):
         name = name.strip()
     if not name:
         raise DogPushException('%s: found monitor without a name' % location)
