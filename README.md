@@ -207,8 +207,8 @@ Pushes the local monitors to datadog:
 - will update existing monitors (so it could override what you were doing if
   you edit an existing monitor in datadog)
 - will not remove or touch untracked monitors (that is, datadog monitors
-  that are not in any of the yaml files) unless the `--delete` flag is
-  passed in.
+  that are not in any of the yaml files) unless the `--delete_untracked` flag
+  is passed in.
 
 This command can run from a cronjob to ensure the monitors on DataDog are
 synchronized with the local monitors.
