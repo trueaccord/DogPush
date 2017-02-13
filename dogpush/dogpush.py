@@ -239,7 +239,7 @@ def command_push(args):
                 remote_monitors[name]['id'],
                 **_prepare_monitor(local_monitors[name]))
 
-    if args.delete:
+    if args.delete_untracked:
         remote_monitors = get_datadog_monitors()
         untracked = set(remote_monitors.keys()) - set(local_monitors.keys())
         if untracked:
@@ -380,7 +380,7 @@ parser_push.set_defaults(command=command_init)
 
 parser_push = subparsers.add_parser(
     'push', help='Push monitors to DataDog.')
-parser_push.add_argument('-d', '--delete', action='store_true',
+parser_push.add_argument('-d', '--delete_untracked', action='store_true',
                          help='Delete untracked monitors.')
 parser_push.set_defaults(command=command_push)
 
