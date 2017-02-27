@@ -368,6 +368,7 @@ def command_diff(args):
         sys.stdout.write(bcolors.FAIL)
         print "*** FAILED *** Untracked monitors found."
         sys.stdout.write(bcolors.ENDC)
+    if any((only_local, changed, only_remote and not args.ignore_untracked)):
         sys.exit(1)
 
 
