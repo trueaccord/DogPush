@@ -344,7 +344,7 @@ def command_diff(args):
                     sys.stdout.write(bcolors.GREEN + line + bcolors.ENDC)
                 else:
                     sys.stdout.write(line)
-    if only_remote:
+    if only_remote and not args.ignore_untracked:
         sys.stdout.write(bcolors.WARNING)
         print '------------------------------------------------------------'
         print ' UNTRACKED MONITORS.  These monitors are only in datadog    '
@@ -388,6 +388,8 @@ parser_push.set_defaults(command=command_push)
 parser_diff = subparsers.add_parser(
     'diff',
     help='Show diff between local monitors and DataDog')
+parser_diff.add_argument('-i', '--ignore_untracked', action='store_true',
+                         help='Ignore untracked monitors.')
 parser_diff.set_defaults(command=command_diff)
 
 
