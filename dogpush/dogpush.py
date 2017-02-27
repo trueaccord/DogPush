@@ -41,6 +41,11 @@ def _load_config(config_file):
         'default_rule_options', LOCAL_DEFAULT_RULE_OPTIONS)
     config['default_rules'] = config.get(
         'default_rules', DATADOG_DEFAULT_RULES)
+    if 'dogpush' not in config:
+        config['dogpush'] = {}
+    config['dogpush']['ignore_prefix'] = config['dogpush'].get(
+        'ignore_prefix', None)
+    config['dogpush']['yaml_width'] = config['dogpush'].get('yaml_width', None)
     # Ensure the keys of the above two groups are disjoint.
     assert(set(config['default_rule_options'].keys()) &
            set(DATADOG_DEFAULT_OPTIONS.keys()) == set())
@@ -84,7 +89,8 @@ DATADOG_DEFAULT_RULES = {
 }
 
 def _pretty_yaml(d):
-    return re.sub('^-', '\n-', yaml.dump(d), flags=re.M)
+    return re.sub('^-', '\n-',
+                  yaml.dump(d, width=CONFIG['dogpush']['yaml_width']), flags=re.M)
 
 
 # Transform a monitor to a canonical form by removing defaults
@@ -134,6 +140,11 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 
 def get_datadog_monitors():
     monitors = datadog.api.Monitor.get_all()
+    if CONFIG['dogpush']['ignore_prefix'] is not None:
+        monitors = [
+            m for m in monitors
+            if not m['name'].startswith(CONFIG['dogpush']['ignore_prefix'])
+        ]
     if not _check_monitor_names_unique(monitors):
         raise DogPushException(
             'Duplicate names found in remote datadog monitors.')
