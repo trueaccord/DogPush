@@ -211,7 +211,7 @@ def _is_changed(local, remote):
     return local['obj'] != remote['obj']
 
 
-def command_init():
+def command_init(args):
     remote_monitors = [m['obj'] for m in get_datadog_monitors().values()]
     monitors = {'alerts': remote_monitors}
     print '# team: TEAMNAME'
@@ -219,7 +219,7 @@ def command_init():
     print _pretty_yaml(monitors)
 
 
-def command_push():
+def command_push(args):
     local_monitors = get_local_monitors()
     remote_monitors = get_datadog_monitors()
 
@@ -233,11 +233,19 @@ def command_push():
     changed = [name for name in common_names
                if _is_changed(local_monitors[name], remote_monitors[name])]
     if changed:
-        print "Updating %d modified alerts" % len(changed)
+        print "Updating %d modified monitors." % len(changed)
         for name in changed:
             datadog.api.Monitor.update(
                 remote_monitors[name]['id'],
                 **_prepare_monitor(local_monitors[name]))
+
+    if args.delete_untracked:
+        remote_monitors = get_datadog_monitors()
+        untracked = set(remote_monitors.keys()) - set(local_monitors.keys())
+        if untracked:
+            print "Deleting %d untracked monitors." % len(untracked)
+            for monitor in untracked:
+                datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
 
 
 def _should_mute(expr, tz, now):
@@ -261,7 +269,7 @@ def _mute_until(expr, tz, now):
     return now
 
 
-def command_mute():
+def command_mute(args):
     local_monitors = get_local_monitors()
     remote_monitors = get_datadog_monitors()
     mute_tags = {}
@@ -292,7 +300,7 @@ def command_mute():
                                                       mute_until['datetime'])
 
 
-def command_diff():
+def command_diff(args):
     local_monitors = get_local_monitors()
     remote_monitors = get_datadog_monitors()
 
@@ -358,7 +366,7 @@ parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
 
-parser.add_argument('--config', '-c',
+parser.add_argument('-c', '--config',
                     default=os.path.join('.', 'config.yaml'),
                     help='configuration file to load')
 
@@ -366,18 +374,20 @@ subparsers = parser.add_subparsers(help='sub-command help')
 
 
 parser_push = subparsers.add_parser(
-    'init', help='init new alerts file')
+    'init', help='Init new alerts file')
 parser_push.set_defaults(command=command_init)
 
 
 parser_push = subparsers.add_parser(
-    'push', help='push monitors to datadog')
+    'push', help='Push monitors to DataDog.')
+parser_push.add_argument('-d', '--delete_untracked', action='store_true',
+                         help='Delete untracked monitors.')
 parser_push.set_defaults(command=command_push)
 
 
 parser_diff = subparsers.add_parser(
     'diff',
-    help='show diff between local monitors and datadog')
+    help='Show diff between local monitors and DataDog')
 parser_diff.set_defaults(command=command_diff)
 
 
@@ -394,7 +404,7 @@ CONFIG_DIR = os.path.abspath(os.path.dirname(args.config))
 
 def main():
     datadog.initialize(**CONFIG['datadog'])
-    args.command()
+    args.command(args)
 
 
 if __name__ == '__main__':
