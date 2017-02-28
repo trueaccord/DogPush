@@ -57,7 +57,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 # Datadog fields we do not store locally.
 IGNORE_FIELDS = ['created_at', 'created', 'modified', 'creator',
                  'org_id', 'overall_state', 'id', 'deleted',
-                 'matching_downtimes',
+                 'matching_downtimes', 'overall_state_modified',
                  # dogpush specific:
                  'mute_when', 'team', 'severity']
 
