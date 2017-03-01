@@ -172,7 +172,7 @@ See `config-sample.yaml` for a full example.
 
 ### DogPush options
 
-There are two optional settings that can be configured in the confi file:
+There are two optional settings that can be configured in the config file:
 
 ```yaml
 dogpush:
