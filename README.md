@@ -52,7 +52,7 @@ datadog:
 Then run `dogpush -c ./config.yaml diff` and all the alerts you currently
 have on datadog will appear as untracked.
 
-The next step would be to create your initial alets file:
+The next step would be to create your initial alerts file:
 
 ```
 dogpush -c ./config.yaml init > ./my_monitors.yaml
@@ -118,7 +118,7 @@ default_rule_options:
 ### The teams section
 
 Teams in DogPush are just a way to append some text to the message body of a
-monitor so it will grab the attention of the right people.  By defining your
+monitor so it will grab the attention of the right people. By defining your
 teams in the global config, it is super easy to add these @-mentions to all
 your monitors. For example,
 ```yaml
