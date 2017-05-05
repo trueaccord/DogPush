@@ -298,7 +298,7 @@ def command_mute(args):
             mute_tags[tag_key] = None
 
     for monitor in local_monitors.values():
-        if monitor['mute_when']:
+        if monitor['mute_when'] and remote_monitors.has_key(monitor['name']):
             remote = remote_monitors[monitor['name']]
             if remote['is_silenced']:
                 print "Alert '%s' is already muted. Skipping." % monitor['name']
