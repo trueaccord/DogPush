@@ -133,7 +133,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 
 
 def get_datadog_monitors():
-    monitors = datadog.api.Monitor.get_all()
+    monitors = datadog.api.Monitor.get_all(with_downtimes="true")
     if not _check_monitor_names_unique(monitors):
         raise DogPushException(
             'Duplicate names found in remote datadog monitors.')
