@@ -170,6 +170,21 @@ automatically mute these alerts.
 
 See `config-sample.yaml` for a full example.
 
+### DogPush options
+
+There are two optional settings that can be configured in the config file:
+
+```yaml
+dogpush:
+  yaml_width: 80
+  ignore_prefix: 'string'
+```
+
+The `yaml_width` option sets the line width of the generated yaml output. 
+
+Using `ignore_prefix` one can define a set of monitor names that are 
+simply ignored by DogPush when fetching the remote monitors.
+
 ## Rule files
 
 On the top of a rules file you can define `team: xyz` to define the default

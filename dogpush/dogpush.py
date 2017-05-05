@@ -41,6 +41,11 @@ def _load_config(config_file):
         'default_rule_options', LOCAL_DEFAULT_RULE_OPTIONS)
     config['default_rules'] = config.get(
         'default_rules', DATADOG_DEFAULT_RULES)
+    if 'dogpush' not in config:
+        config['dogpush'] = {}
+    config['dogpush']['ignore_prefix'] = config['dogpush'].get(
+        'ignore_prefix', None)
+    config['dogpush']['yaml_width'] = config['dogpush'].get('yaml_width', None)
     # Ensure the keys of the above two groups are disjoint.
     assert(set(config['default_rule_options'].keys()) &
            set(DATADOG_DEFAULT_OPTIONS.keys()) == set())
@@ -84,7 +89,8 @@ DATADOG_DEFAULT_RULES = {
 }
 
 def _pretty_yaml(d):
-    return re.sub('^-', '\n-', yaml.dump(d), flags=re.M)
+    return re.sub('^-', '\n-',
+                  yaml.dump(d, width=CONFIG['dogpush']['yaml_width']), flags=re.M)
 
 
 # Transform a monitor to a canonical form by removing defaults
@@ -134,6 +140,12 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 
 def get_datadog_monitors():
     monitors = datadog.api.Monitor.get_all(with_downtimes="true")
+    if CONFIG['dogpush']['ignore_prefix'] is not None:
+        monitors = [
+            m for m in monitors
+            if not m['name'].startswith(CONFIG['dogpush']['ignore_prefix'])
+        ]
+
     if not _check_monitor_names_unique(monitors):
         raise DogPushException(
             'Duplicate names found in remote datadog monitors.')
@@ -287,7 +299,7 @@ def command_mute(args):
             mute_tags[tag_key] = None
 
     for monitor in local_monitors.values():
-        if monitor['mute_when']:
+        if monitor['mute_when'] and remote_monitors.has_key(monitor['name']):
             remote = remote_monitors[monitor['name']]
             if remote['is_silenced']:
                 print "Alert '%s' is already muted. Skipping." % monitor['name']
@@ -344,7 +356,7 @@ def command_diff(args):
                     sys.stdout.write(bcolors.GREEN + line + bcolors.ENDC)
                 else:
                     sys.stdout.write(line)
-    if only_remote:
+    if only_remote and not args.ignore_untracked:
         sys.stdout.write(bcolors.WARNING)
         print '------------------------------------------------------------'
         print ' UNTRACKED MONITORS.  These monitors are only in datadog    '
@@ -357,6 +369,7 @@ def command_diff(args):
         sys.stdout.write(bcolors.FAIL)
         print "*** FAILED *** Untracked monitors found."
         sys.stdout.write(bcolors.ENDC)
+    if any((only_local, changed, only_remote and not args.ignore_untracked)):
         sys.exit(1)
 
 
@@ -388,6 +401,8 @@ parser_push.set_defaults(command=command_push)
 parser_diff = subparsers.add_parser(
     'diff',
     help='Show diff between local monitors and DataDog')
+parser_diff.add_argument('-i', '--ignore_untracked', action='store_true',
+                         help='Ignore untracked monitors.')
 parser_diff.set_defaults(command=command_diff)
 
 
