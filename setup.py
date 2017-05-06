@@ -3,7 +3,7 @@
 from setuptools import setup
 
 setup(name='DogPush',
-      version='0.3.3',
+      version='0.3.4',
       description='DogPush: manage datadog alerts in local files.',
       author='Nadav S Samet',
       author_email='thesamet@gmail.com',
