@@ -49,6 +49,8 @@ def _load_config(config_file):
     # Ensure the keys of the above two groups are disjoint.
     assert(set(config['default_rule_options'].keys()) &
            set(DATADOG_DEFAULT_OPTIONS.keys()) == set())
+    config['dogpush']['filter_by_at_mention'] = config['dogpush'].get(
+        'filter_by_at_mention', None)
 
     return config
 
@@ -146,6 +148,15 @@ def get_datadog_monitors():
             if not m['name'].startswith(CONFIG['dogpush']['ignore_prefix'])
         ]
 
+    if CONFIG['dogpush']['filter_by_at_mention']:
+        monitors = [
+            m for m in monitors
+            if any(
+                team in m['message']
+                for team in CONFIG['dogpush']['filter_by_at_mention']
+            )
+        ]
+
     if not _check_monitor_names_unique(monitors):
         raise DogPushException(
             'Duplicate names found in remote datadog monitors.')
@@ -199,6 +210,15 @@ def get_local_monitors():
                     monitors.append(monitor)
     if not _check_monitor_names_unique(monitors):
         raise DogPushException('Duplicate names found in local monitors.')
+
+    if CONFIG['dogpush']['filter_by_at_mention']:
+        monitors = [
+            m for m in monitors
+            if any(
+                team in m['obj']['message']
+                for team in CONFIG['dogpush']['filter_by_at_mention']
+            )
+        ]
     result = dict((m['name'], m) for m in monitors)
     return result
 
