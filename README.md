@@ -212,7 +212,9 @@ rules.
 Prints the diff between the monitors in the files and the monitors in datadog.
 This is useful when just starting out so you can build your initial rule
 files.  Also, use `dogpush diff` before `dogpush push` as a dry-run to see
-what will change.
+what will change. By default `dogpush diff` will include warnings for all untracked
+monitors which are not updated with `dogpush push`. To see exactly what will be updated
+run with the flag `dogpush diff --ignore_untracked`.
 
 ### dogpush push
 
