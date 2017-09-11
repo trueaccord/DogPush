@@ -90,7 +90,7 @@ DATADOG_DEFAULT_RULES = {
 
 def _pretty_yaml(d):
     return re.sub('^-', '\n-',
-                  yaml.dump(d, width=CONFIG['dogpush']['yaml_width']), flags=re.M)
+                  yaml.safe_dump(d, width=CONFIG['dogpush']['yaml_width']), flags=re.M)
 
 
 # Transform a monitor to a canonical form by removing defaults
