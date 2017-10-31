@@ -369,7 +369,7 @@ def command_diff(args):
         sys.stdout.write(bcolors.FAIL)
         print "*** FAILED *** Untracked monitors found."
         sys.stdout.write(bcolors.ENDC)
-    if args.status and any((only_local, changed, only_remote and not args.ignore_untracked)):
+    if args.exit_status and any((only_local, changed, only_remote and not args.ignore_untracked)):
         sys.exit(1)
 
 
@@ -404,8 +404,8 @@ parser_diff = subparsers.add_parser(
 parser_diff.add_argument('-i', '--ignore_untracked', action='store_true',
                          help='Ignore untracked monitors.')
 parser_diff.add_argument(
-    '--no_status',
-    dest='status',
+    '--no_exitstatus',
+    dest='exit_status',
     action='store_false',
     help='Diff will return 0 if there are differences')
 parser_diff.set_defaults(command=command_diff)

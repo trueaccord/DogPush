@@ -214,6 +214,10 @@ This is useful when just starting out so you can build your initial rule
 files.  Also, use `dogpush diff` before `dogpush push` as a dry-run to see
 what will change.
 
+`dogpush diff --no_exitstatus` will cause dogpush diff to return exit code 0
+regardless of if there is a difference detected. If this flag is not present
+then dogpush will return 1 if there is a difference between local and remote.
+
 ### dogpush push
 
 Pushes the local monitors to datadog:
