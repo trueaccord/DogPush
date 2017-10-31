@@ -407,7 +407,8 @@ parser_diff.add_argument(
     '--no_exitstatus',
     dest='exit_status',
     action='store_false',
-    help='Diff will return 0 if there are differences')
+    default=True,
+    help='Diff will return 0 if there are differences. Default (true), return 1 for differences.')
 parser_diff.set_defaults(command=command_diff)
 
 
