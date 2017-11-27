@@ -20,6 +20,7 @@ import bcolors
 
 
 PROGNAME = 'dogpush'
+ERRORS_LIST = []
 
 
 class DogPushException(Exception):
@@ -243,6 +244,7 @@ def command_push(args):
             try:
                 datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
             except ApiError as ae:
+                ERRORS_LIST.append(ae)
                 print "The monitor, '%s', was not created due to a Datadog API error.\n(%s)" % name, ae.message
 
     common_names = set(local_monitors.keys()) & set(remote_monitors.keys())
@@ -256,6 +258,7 @@ def command_push(args):
                     remote_monitors[name]['id'],
                     **_prepare_monitor(local_monitors[name]))
             except ApiError as ae:
+                ERRORS_LIST.append(ae)
                 print "The monitor, '%s', was not updated due to a Datadog API error.\n(%s)" % name, ae.message
     if args.delete_untracked:
         remote_monitors = get_datadog_monitors()
@@ -266,6 +269,7 @@ def command_push(args):
                 try:
                     datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
                 except ApiError as ae:
+                    ERRORS_LIST.append(ae)
                     print "The monitor, '%s', was not deleted due to a Datadog API error.\n(%s)" % name, ae.message
 
 
@@ -321,6 +325,7 @@ def command_mute(args):
                     print "Muting alert '%s' until %s" % (monitor['name'],
                                                           mute_until['datetime'])
                 except ApiError as ae:
+                    ERRORS_LIST.append(ae)
                     print "The monitor, '%s', was not muted due to a Datadog API error.\n(%s)" % name, ae.message
 
 
@@ -438,6 +443,9 @@ CONFIG_DIR = os.path.abspath(os.path.dirname(args.config))
 def main():
     datadog.initialize(**CONFIG['datadog'])
     args.command(args)
+    if len(ERRORS_LIST) > 0:
+        raise DogPushException('One or more exceptions were caught while running dogpush. '
+                               'Please review standard output for more information.')
 
 
 if __name__ == '__main__':
