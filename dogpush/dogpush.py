@@ -245,7 +245,7 @@ def command_push(args):
                 datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
             except ApiError as ae:
                 ERRORS_LIST.append(ae)
-                print "The monitor, '%s', was not created due to a Datadog API error.\n(%s)" % name, ae.message
+                print "The monitor, '{0}', was not created due to a Datadog API error.\n({1})".format(name, ae.message)
 
     common_names = set(local_monitors.keys()) & set(remote_monitors.keys())
     changed = [name for name in common_names
@@ -259,7 +259,7 @@ def command_push(args):
                     **_prepare_monitor(local_monitors[name]))
             except ApiError as ae:
                 ERRORS_LIST.append(ae)
-                print "The monitor, '%s', was not updated due to a Datadog API error.\n(%s)" % name, ae.message
+                print "The monitor, '{0}', was not updated due to a Datadog API error.\n({1})".format(name, ae.message)
     if args.delete_untracked:
         remote_monitors = get_datadog_monitors()
         untracked = set(remote_monitors.keys()) - set(local_monitors.keys())
@@ -270,7 +270,9 @@ def command_push(args):
                     datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
                 except ApiError as ae:
                     ERRORS_LIST.append(ae)
-                    print "The monitor, '%s', was not deleted due to a Datadog API error.\n(%s)" % name, ae.message
+                    print "The monitor, '{0}', was not deleted due to a Datadog API error.\n({1})".format(
+                        monitor,
+                        ae.message)
 
 
 def _should_mute(expr, tz, now):
@@ -326,7 +328,7 @@ def command_mute(args):
                                                           mute_until['datetime'])
                 except ApiError as ae:
                     ERRORS_LIST.append(ae)
-                    print "The monitor, '%s', was not muted due to a Datadog API error.\n(%s)" % name, ae.message
+                    print "The monitor, '{0}', was not muted due to a Datadog API error.\n({0})".format(id, ae.message)
 
 
 def command_diff(args):
