@@ -12,6 +12,7 @@ import sys
 
 import datadog
 import datadog.api
+from datadog.api.exceptions import ApiError
 import pytz
 import yaml
 
@@ -239,7 +240,10 @@ def command_push(args):
     if only_local:
         print "Pushing %d new monitors." % len(only_local)
         for name in only_local:
-            datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
+            try:
+                datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
+            except ApiError as ae:
+                print "The monitor, '%s', was not created due to a Datadog API error.\n(%s)" % name, ae.message
 
     common_names = set(local_monitors.keys()) & set(remote_monitors.keys())
     changed = [name for name in common_names
@@ -247,17 +251,22 @@ def command_push(args):
     if changed:
         print "Updating %d modified monitors." % len(changed)
         for name in changed:
-            datadog.api.Monitor.update(
-                remote_monitors[name]['id'],
-                **_prepare_monitor(local_monitors[name]))
-
+            try:
+                datadog.api.Monitor.update(
+                    remote_monitors[name]['id'],
+                    **_prepare_monitor(local_monitors[name]))
+            except ApiError as ae:
+                print "The monitor, '%s', was not updated due to a Datadog API error.\n(%s)" % name, ae.message
     if args.delete_untracked:
         remote_monitors = get_datadog_monitors()
         untracked = set(remote_monitors.keys()) - set(local_monitors.keys())
         if untracked:
             print "Deleting %d untracked monitors." % len(untracked)
             for monitor in untracked:
-                datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
+                try:
+                    datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
+                except ApiError as ae:
+                    print "The monitor, '%s', was not deleted due to a Datadog API error.\n(%s)" % name, ae.message
 
 
 def _should_mute(expr, tz, now):
@@ -307,9 +316,12 @@ def command_mute(args):
             mute_until = mute_tags[monitor['mute_when']]
             if mute_until:
                 id = remote['id']
-                datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
-                print "Muting alert '%s' until %s" % (monitor['name'],
-                                                      mute_until['datetime'])
+                try:
+                    datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
+                    print "Muting alert '%s' until %s" % (monitor['name'],
+                                                          mute_until['datetime'])
+                except ApiError as ae:
+                    print "The monitor, '%s', was not muted due to a Datadog API error.\n(%s)" % name, ae.message
 
 
 def command_diff(args):
