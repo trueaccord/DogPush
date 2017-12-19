@@ -98,7 +98,7 @@ def _pretty_yaml(d):
 # Transform a monitor to a canonical form by removing defaults
 def _canonical_monitor(original, default_team=None, **kwargs):
     m = copy.deepcopy(original)
-    if 'tags' in m and not m['tags']:
+    if 'tags' in m and (m['tags'] == ['*'] or not m['tags']):
         del m['tags']
     for field in IGNORE_FIELDS:
         m.pop(field, None)
