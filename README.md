@@ -117,30 +117,27 @@ default_rule_options:
 
 ### The teams section
 
-Teams in DogPush are just a way to append some text to the message body of a
-monitor so it will grab the attention of the right people. By defining your
+Teams in DogPush are a way to append notification methods in a conditional fashion
+to so it will grab the attention of the right people. By defining your
 teams in the global config, it is super easy to add these @-mentions to all
 your monitors. For example,
 ```yaml
 teams:
   eng:
     notifications:
-      CRITICAL: '@hipchat-Engineering @victorops-eng'
-      WARNING: '@eng-alerts@example.com'
+      alert: '@hipchat-Engineering @victorops-eng'
+      warning: '@eng-alerts@example.com'
   ops:
     notifications:
-      CRITICAL: '@hipchat-Ops'
+      alert: '@hipchat-Ops'
 ```
 
-means that any monitor of severity `CRITICAL` to the `eng` team will have the
-'@hipchat-Engineering @victorops-eng' appending to its message body.
+means that when an monitor metric reaches the alert threshold the `eng` team
+will be notfied via '@hipchat-Engineering @victorops-eng'.
 
 Then, in a rules file, you can have a top level `team` setting (making all
 the alerts automatically go to that team), or specify 'team' at the alert
 level.
-
-The default severity is `CRITICAL`, and you can override the severity in each
-monitor by using the `severity` key.
 
 ### Muting alerts based on time windows
 
@@ -180,9 +177,9 @@ dogpush:
   ignore_prefix: 'string'
 ```
 
-The `yaml_width` option sets the line width of the generated yaml output. 
+The `yaml_width` option sets the line width of the generated yaml output.
 
-Using `ignore_prefix` one can define a set of monitor names that are 
+Using `ignore_prefix` one can define a set of monitor names that are
 simply ignored by DogPush when fetching the remote monitors.
 
 ## Rule files
