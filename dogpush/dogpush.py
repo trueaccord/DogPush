@@ -53,9 +53,6 @@ def _load_config(config_file):
     return config
 
 
-SEVERITIES = ['CRITICAL', 'WARNING', 'INFO']
-
-
 SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -78,8 +75,6 @@ LOCAL_DEFAULT_RULE_OPTIONS = {
 }
 
 DATADOG_DEFAULT_OPTIONS = {
-  'notify_audit': False,
-  'locked': False,
   'silenced': {}
 }
 
@@ -118,14 +113,12 @@ def _canonical_monitor(original, default_team=None, **kwargs):
     m['name'] = m['name'].strip()
     original_team = original.get('team')
     team = original_team if original_team is not None else default_team
-    severity = original.get('severity') or 'CRITICAL'
     if team:
         if isinstance(team, basestring):
             team = [team]
         m['message'] = m.get('message', '')
-        for t in team:
-            dogpush_line = CONFIG['teams'][t]['notifications'][severity]
-            m['message'] += ('\n' if m['message'] else '') + dogpush_line
+        dogpush_line = get_notify_string(team)
+        m['message'] += ('\n' if m['message'] else '') + dogpush_line
 
     result = dict(
         name = m['name'],
@@ -136,6 +129,31 @@ def _canonical_monitor(original, default_team=None, **kwargs):
     )
     result.update(kwargs)
     return result
+
+
+def get_notify_string(teams):
+    """Build notification string."""
+    is_warning = ''
+    is_alert = ''
+    is_recovery = ''
+    notification_items = {'warning': [], 'alert': [], 'recovery': []}
+    for team in teams:
+        for notification in ['warning', 'alert']:
+            try:
+                for item in CONFIG['teams'][team]['notifications'][notification]:
+                    if item not in notification_items[notification]:
+                        notification_items[notification].append(item)
+                    if item not in notification_items['recovery']:
+                        notification_items['recovery'].append(item)
+            except KeyError:
+                pass
+    for warning in notification_items['warning']:
+        is_warning += " {}\n".format(warning)
+    for alert in notification_items['alert']:
+        is_alert += " {}\n".format(alert)
+    for recovery in notification_items['recovery']:
+        is_recovery += " {}\n".format(recovery)
+    return "{{#is_warning}}\n{}{{/is_warning}}\n{{#is_alert}}\n{}{{/is_alert}}\n{{#is_recovery}}\n{}{{/is_recovery}}".format(is_warning, is_alert, is_recovery)
 
 
 def get_datadog_monitors():

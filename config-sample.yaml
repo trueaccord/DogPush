@@ -6,11 +6,15 @@ datadog:
 teams:
   eng:
     notifications:
-      CRITICAL: '@hipchat-Engineering @victorops-eng'
-      WARNING: '@eng-alerts@example.com'
+      alert: 
+      - '@hipchat-Engineering'
+      - '@victorops-eng'
+      warning:
+      - '@eng-alerts@example.com'
   ops:
     notifications:
-      CRITICAL: '@hipchat-Ops'
+      alert:
+      - '@hipchat-Ops'
 
 mute_tags:
   not_business_hours:
