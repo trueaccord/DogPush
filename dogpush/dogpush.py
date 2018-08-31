@@ -141,7 +141,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 
 
 def get_datadog_monitors():
-    monitors = datadog.api.Monitor.get_all(with_downtimes="true")
+    monitors = datadog.api.Monitor.get_all(with_downtimes="false")
     if CONFIG['dogpush']['ignore_prefix'] is not None:
         monitors = [
             m for m in monitors
