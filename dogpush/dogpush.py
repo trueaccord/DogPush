@@ -261,7 +261,7 @@ def command_validate(args):
         # pprint.pprint(_prepare_monitor(local_monitors[name]))
         print "Checking monitor %s%s%s...\t\t" % (color.BOLD, name, color.END),
         try:
-            datadog.api.api_client.APIClient.submit('POST', 'monitor/validate', _prepare_to_validate(_prepare_monitor(local_monitors[name])))
+            datadog.api.base.HTTPClient.request('POST', '/monitor/validate', _prepare_to_validate(_prepare_monitor(local_monitors[name])))
             print color.BOLD + color.GREEN + "OK" + color.END
         except datadog.api.exceptions.ApiError:
             errors = True
