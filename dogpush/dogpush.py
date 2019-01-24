@@ -68,7 +68,7 @@ IGNORE_FIELDS = ['created_at', 'created', 'modified', 'creator',
                  # dogpush specific:
                  'mute_when', 'team', 'severity']
 
-IGNORE_OPTIONS = ['silenced']
+IGNORE_OPTIONS = ['silenced', 'include_tags']
 
 # Datadog fields that we do not store in our monitor rules if they have the
 # default value.
@@ -92,7 +92,7 @@ DATADOG_DEFAULT_RULES = {
 
 def _pretty_yaml(d):
     return re.sub('^-', '\n-',
-                  yaml.dump(d, width=CONFIG['dogpush']['yaml_width']), flags=re.M)
+                  yaml.dump(d, width=CONFIG['dogpush']['yaml_width'], default_flow_style=False), flags=re.M)
 
 
 # Transform a monitor to a canonical form by removing defaults
