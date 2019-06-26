@@ -110,8 +110,8 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         if m.get('options', {}).get(field) == value:
             del m['options'][field]
     for (field, value) in CONFIG['default_rules'].items():
-        if m.get(field) == value:
-            del m[field]
+        if field not in m:
+            m[field] = value
     # If options is {'thresholds': {'critical': x}}, then it is redundant.
     if not m.get('options'):
         m.pop('options', None)
