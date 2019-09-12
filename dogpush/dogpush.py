@@ -263,9 +263,11 @@ def command_validate(args):
         try:
             datadog.api.base.HTTPClient.request('POST', '/monitor/validate', _prepare_to_validate(_prepare_monitor(local_monitors[name])))
             print color.BOLD + color.GREEN + "OK" + color.END
-        except datadog.api.exceptions.ApiError:
+        except datadog.api.exceptions.ApiError as e:
             errors = True
             print color.BOLD + color.RED + "FAIL" + color.END
+            # Display error which has been returned
+            print "Error received: {}\n".format(e)
 
         # Just a little sleep so we don't overload DD API with each call
         time.sleep(0.1)
