@@ -124,7 +124,14 @@ def _canonical_monitor(original, default_team=None, **kwargs):
             team = [team]
         m['message'] = m.get('message', '')
         for t in team:
-            dogpush_line = CONFIG['teams'][t]['notifications'][severity]
+            dogpush_line=""
+            notifications_rcpt = CONFIG['teams'][t]['notifications'][severity]
+            if severity == 'WARNING':
+                dogpush_line = "{{#is_warning}}"+notifications_rcpt+"{{/is_warning}}{{#is_warning_recovery}}"+notifications_rcpt+"{{/is_warning_recovery}}"
+            elif severity == 'CRITICAL':
+                dogpush_line = "{{#is_alert}}"+notifications_rcpt+"{{/is_alert}}{{#is_recovery}}"+notifications_rcpt+"{{/is_recovery}}"
+            else:
+                dogpush_line = notifications_rcpt
             m['message'] += ('\n' if m['message'] else '') + dogpush_line
 
     result = dict(
