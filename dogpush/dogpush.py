@@ -9,6 +9,7 @@ import glob
 import os
 import re
 import sys
+import time
 
 import datadog
 import datadog.api
@@ -19,6 +20,19 @@ import bcolors
 
 
 PROGNAME = 'dogpush'
+
+# Colors in console
+class color:
+   PURPLE = '\033[95m'
+   CYAN = '\033[96m'
+   DARKCYAN = '\033[36m'
+   BLUE = '\033[94m'
+   GREEN = '\033[92m'
+   YELLOW = '\033[93m'
+   RED = '\033[91m'
+   BOLD = '\033[1m'
+   UNDERLINE = '\033[4m'
+   END = '\033[0m'
 
 
 class DogPushException(Exception):
@@ -221,6 +235,15 @@ def _prepare_monitor(m):
     return obj
 
 
+def _prepare_to_validate(m):
+    obj = {
+        'type': m['type'],
+        'query': m['query']
+    }
+
+    return obj
+
+
 def _is_changed(local, remote):
     # For an alert with `mute_when`, we ignore silencing when comparing.
     # TODO(nadavsr): rethink how silencing should affect monitors in general.
@@ -236,6 +259,29 @@ def command_init(args):
     print '# team: TEAMNAME'
     print
     print _pretty_yaml(monitors)
+
+
+def command_validate(args):
+    local_monitors = get_local_monitors()
+    errors = False
+    for name in local_monitors:
+        # pprint.pprint(_prepare_monitor(local_monitors[name]))
+        print "Checking monitor %s%s%s...\t\t" % (color.BOLD, name, color.END),
+        try:
+            datadog.api.base.HTTPClient.request('POST', '/monitor/validate', _prepare_to_validate(_prepare_monitor(local_monitors[name])))
+            print color.BOLD + color.GREEN + "OK" + color.END
+        except datadog.api.exceptions.ApiError as e:
+            errors = True
+            print color.BOLD + color.RED + "FAIL" + color.END
+            # Display error which has been returned
+            print "Error received: {}\n".format(e)
+
+        # Just a little sleep so we don't overload DD API with each call
+        time.sleep(0.1)
+
+    if errors:
+        sys.exit(1)
+
 
 
 def command_push(args):
@@ -418,6 +464,10 @@ parser_diff.add_argument(
     help='Diff will return 0 if there are differences. Default (true), return 1 for differences.')
 parser_diff.set_defaults(command=command_diff)
 
+parser_validate = subparsers.add_parser(
+    'validate',
+    help='Validate all local monitors agains Datadog API Monitor Validate')
+parser_validate.set_defaults(command=command_validate)
 
 parser_mute = subparsers.add_parser(
     'mute',
