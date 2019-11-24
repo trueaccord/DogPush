@@ -12,6 +12,7 @@ import sys
 
 import datadog
 import datadog.api
+from datadog.api.exceptions import ApiError
 import pytz
 import yaml
 
@@ -19,6 +20,7 @@ import bcolors
 
 
 PROGNAME = 'dogpush'
+ERRORS_LIST = []
 
 
 class DogPushException(Exception):
@@ -96,7 +98,7 @@ def _pretty_yaml(d):
 # Transform a monitor to a canonical form by removing defaults
 def _canonical_monitor(original, default_team=None, **kwargs):
     m = copy.deepcopy(original)
-    if 'tags' in m and not m['tags']:
+    if 'tags' in m and (m['tags'] == ['*'] or not m['tags']):
         del m['tags']
     for field in IGNORE_FIELDS:
         m.pop(field, None)
@@ -146,7 +148,7 @@ def _canonical_monitor(original, default_team=None, **kwargs):
 
 
 def get_datadog_monitors():
-    monitors = datadog.api.Monitor.get_all(with_downtimes="true")
+    monitors = datadog.api.Monitor.get_all(with_downtimes="false")
     if CONFIG['dogpush']['ignore_prefix'] is not None:
         monitors = [
             m for m in monitors
@@ -233,9 +235,9 @@ def _is_changed(local, remote):
 def command_init(args):
     remote_monitors = [m['obj'] for m in get_datadog_monitors().values()]
     monitors = {'alerts': remote_monitors}
-    print '# team: TEAMNAME'
-    print
-    print _pretty_yaml(monitors)
+    print('# team: TEAMNAME')
+    print()
+    print(_pretty_yaml(monitors))
 
 
 def command_push(args):
@@ -244,27 +246,40 @@ def command_push(args):
 
     only_local = set(local_monitors.keys()) - set(remote_monitors.keys())
     if only_local:
-        print "Pushing %d new monitors." % len(only_local)
+        print("Pushing %d new monitors." % len(only_local))
         for name in only_local:
-            datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
+            try:
+                datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
+            except ApiError as ae:
+                ERRORS_LIST.append(ae)
+                print("The monitor, '{0}', was not created due to a Datadog API error.\n({1})".format(name, ae.message))
 
     common_names = set(local_monitors.keys()) & set(remote_monitors.keys())
     changed = [name for name in common_names
                if _is_changed(local_monitors[name], remote_monitors[name])]
     if changed:
-        print "Updating %d modified monitors." % len(changed)
+        print("Updating %d modified monitors." % len(changed))
         for name in changed:
-            datadog.api.Monitor.update(
-                remote_monitors[name]['id'],
-                **_prepare_monitor(local_monitors[name]))
-
+            try:
+                datadog.api.Monitor.update(
+                    remote_monitors[name]['id'],
+                    **_prepare_monitor(local_monitors[name]))
+            except ApiError as ae:
+                ERRORS_LIST.append(ae)
+                print("The monitor, '{0}', was not updated due to a Datadog API error.\n({1})".format(name, ae.message))
     if args.delete_untracked:
         remote_monitors = get_datadog_monitors()
         untracked = set(remote_monitors.keys()) - set(local_monitors.keys())
         if untracked:
-            print "Deleting %d untracked monitors." % len(untracked)
+            print("Deleting %d untracked monitors." % len(untracked))
             for monitor in untracked:
-                datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
+                try:
+                    datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
+                except ApiError as ae:
+                    ERRORS_LIST.append(ae)
+                    print("The monitor, '{0}', was not deleted due to a Datadog API error.\n({1})".format(
+                        monitor,
+                        ae.message))
 
 
 def _should_mute(expr, tz, now):
@@ -309,14 +324,18 @@ def command_mute(args):
         if monitor['mute_when'] and remote_monitors.has_key(monitor['name']):
             remote = remote_monitors[monitor['name']]
             if remote['is_silenced']:
-                print "Alert '%s' is already muted. Skipping." % monitor['name']
+                print("Alert '%s' is already muted. Skipping." % monitor['name'])
                 continue
             mute_until = mute_tags[monitor['mute_when']]
             if mute_until:
                 id = remote['id']
-                datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
-                print "Muting alert '%s' until %s" % (monitor['name'],
-                                                      mute_until['datetime'])
+                try:
+                    datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
+                    print("Muting alert '%s' until %s" % (monitor['name'],
+                                                          mute_until['datetime']))
+                except ApiError as ae:
+                    ERRORS_LIST.append(ae)
+                    print("The monitor, '{0}', was not muted due to a Datadog API error.\n({0})".format(id, ae.message))
 
 
 def command_diff(args):
@@ -332,21 +351,21 @@ def command_diff(args):
 
     if only_local:
         sys.stdout.write(bcolors.WARNING)
-        print '---------------------------------------------------------'
-        print ' NEW MONITORS.  These monitors are currently missing in'
-        print ' datadog and can be pushed using "%s push"' % PROGNAME
-        print '---------------------------------------------------------'
+        print('---------------------------------------------------------')
+        print(' NEW MONITORS.  These monitors are currently missing in')
+        print(' datadog and can be pushed using "%s push"' % PROGNAME)
+        print('---------------------------------------------------------')
         sys.stdout.write(bcolors.ENDC)
         monitors = [local_monitors[name]['obj'] for name in only_local]
-        print _pretty_yaml(monitors)
+        print(_pretty_yaml(monitors))
     if changed:
         sys.stdout.write(bcolors.WARNING)
-        print '---------------------------------------------------------'
-        print ' TO BE UPDATED.  These monitors exist in datadog, but are'
-        print ' different than the local version.  Use "%s push"' % PROGNAME
-        print ' to push them to datadog.'
-        print '---------------------------------------------------------'
-        print
+        print('---------------------------------------------------------')
+        print(' TO BE UPDATED.  These monitors exist in datadog, but are')
+        print(' different than the local version.  Use "%s push"' % PROGNAME)
+        print(' to push them to datadog.')
+        print('---------------------------------------------------------')
+        print()
         sys.stdout.write(bcolors.ENDC)
         for name in changed:
             remote_name = 'datadog:%s' % name
@@ -365,16 +384,16 @@ def command_diff(args):
                     sys.stdout.write(line)
     if only_remote and not args.ignore_untracked:
         sys.stdout.write(bcolors.WARNING)
-        print '------------------------------------------------------------'
-        print ' UNTRACKED MONITORS.  These monitors are only in datadog    '
-        print ' and needed to be MANUALLY added to a local file or removed '
-        print ' from datadog.                                              '
-        print '------------------------------------------------------------'
+        print('------------------------------------------------------------')
+        print(' UNTRACKED MONITORS.  These monitors are only in datadog    ')
+        print(' and needed to be MANUALLY added to a local file or removed ')
+        print(' from datadog.                                              ')
+        print('------------------------------------------------------------')
         sys.stdout.write(bcolors.ENDC)
         monitors = [remote_monitors[name]['obj'] for name in only_remote]
-        print _pretty_yaml(monitors)
+        print(_pretty_yaml(monitors))
         sys.stdout.write(bcolors.FAIL)
-        print "*** FAILED *** Untracked monitors found."
+        print("*** FAILED *** Untracked monitors found.")
         sys.stdout.write(bcolors.ENDC)
     if args.exit_status and any((only_local, changed, only_remote and not args.ignore_untracked)):
         sys.exit(1)
@@ -433,6 +452,9 @@ CONFIG_DIR = os.path.abspath(os.path.dirname(args.config))
 def main():
     datadog.initialize(**CONFIG['datadog'])
     args.command(args)
+    if len(ERRORS_LIST) > 0:
+        raise DogPushException('One or more exceptions were caught while running dogpush. '
+                               'Please review standard output for more information.')
 
 
 if __name__ == '__main__':
