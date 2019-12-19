@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import argparse
 import calendar
@@ -17,9 +17,7 @@ import yaml
 
 import bcolors
 
-
 PROGNAME = 'dogpush'
-
 
 class DogPushException(Exception):
     pass
@@ -102,25 +100,25 @@ def _canonical_monitor(original, default_team=None, **kwargs):
         m.pop(field, None)
     for field in IGNORE_OPTIONS:
         m.get('options', {}).pop(field, None)
-    option_defaults = (DATADOG_DEFAULT_OPTIONS.items() +
-                       CONFIG['default_rule_options'].items())
+    option_defaults = (list(DATADOG_DEFAULT_OPTIONS.items()) +
+                       list(CONFIG['default_rule_options'].items()))
     for (field, value) in option_defaults:
         if m.get('options', {}).get(field) == value:
             del m['options'][field]
-    for (field, value) in CONFIG['default_rules'].items():
+    for (field, value) in list(CONFIG['default_rules'].items()):
         if m.get(field) == value:
             del m[field]
     # If options is {'thresholds': {'critical': x}}, then it is redundant.
     if not m.get('options'):
         m.pop('options', None)
-    elif m['options'].keys() == ['thresholds'] and m['options']['thresholds'].keys() == ['critical']:
+    elif list(m['options'].keys()) == ['thresholds'] and list(m['options']['thresholds'].keys()) == ['critical']:
         del m['options']
     m['name'] = m['name'].strip()
     original_team = original.get('team')
     team = original_team if original_team is not None else default_team
     severity = original.get('severity') or 'CRITICAL'
     if team:
-        if isinstance(team, basestring):
+        if isinstance(team, str):
             team = [team]
         m['message'] = m.get('message', '')
         for t in team:
@@ -170,14 +168,14 @@ def _check_monitor_names_unique(monitors):
         for name in names:
             counts[name] = counts.get(name, 0) + 1
             if counts[name] > 1:
-                print >> sys.stderr, "Duplicate name: %s" % name
+                print("Duplicate name: %s" % name, file=sys.stderr)
         return False
     return True
 
 
 def _check_monitor(monitor, location):
     name = monitor.get('name', '')
-    if isinstance(name, basestring):
+    if isinstance(name, str):
         name = name.strip()
     if not name:
         raise DogPushException('%s: found monitor without a name' % location)
@@ -212,11 +210,11 @@ def get_local_monitors():
 
 def _prepare_monitor(m):
     obj = copy.deepcopy(m['obj'])
-    for (key, value) in CONFIG['default_rule_options'].items():
+    for (key, value) in list(CONFIG['default_rule_options'].items()):
         obj['options'] = obj.get('options', {})
         if key not in obj['options']:
             obj['options'][key] = value
-    for (key, value) in CONFIG['default_rules'].items():
+    for (key, value) in list(CONFIG['default_rules'].items()):
         obj[key] = obj.get(key, value)
     return obj
 
@@ -231,11 +229,11 @@ def _is_changed(local, remote):
 
 
 def command_init(args):
-    remote_monitors = [m['obj'] for m in get_datadog_monitors().values()]
+    remote_monitors = [m['obj'] for m in list(get_datadog_monitors().values())]
     monitors = {'alerts': remote_monitors}
-    print '# team: TEAMNAME'
-    print
-    print _pretty_yaml(monitors)
+    print('# team: TEAMNAME')
+    print()
+    print(_pretty_yaml(monitors))
 
 
 def command_push(args):
@@ -244,7 +242,7 @@ def command_push(args):
 
     only_local = set(local_monitors.keys()) - set(remote_monitors.keys())
     if only_local:
-        print "Pushing %d new monitors." % len(only_local)
+        print("Pushing %d new monitors." % len(only_local))
         for name in only_local:
             datadog.api.Monitor.create(**_prepare_monitor(local_monitors[name]))
 
@@ -252,7 +250,7 @@ def command_push(args):
     changed = [name for name in common_names
                if _is_changed(local_monitors[name], remote_monitors[name])]
     if changed:
-        print "Updating %d modified monitors." % len(changed)
+        print("Updating %d modified monitors." % len(changed))
         for name in changed:
             datadog.api.Monitor.update(
                 remote_monitors[name]['id'],
@@ -262,7 +260,7 @@ def command_push(args):
         remote_monitors = get_datadog_monitors()
         untracked = set(remote_monitors.keys()) - set(local_monitors.keys())
         if untracked:
-            print "Deleting %d untracked monitors." % len(untracked)
+            print("Deleting %d untracked monitors." % len(untracked))
             for monitor in untracked:
                 datadog.api.Monitor.delete(remote_monitors[monitor]['id'])
 
@@ -294,7 +292,7 @@ def command_mute(args):
     mute_tags = {}
 
     now = datetime.datetime.now(pytz.UTC)
-    for tag_key, tag_value in CONFIG.get('mute_tags', {}).items():
+    for tag_key, tag_value in list(CONFIG.get('mute_tags', {}).items()):
         tz = pytz.timezone(tag_value['timezone'])
         if _should_mute(tag_value['expr'], tz, now):
             next_active_time = _mute_until(tag_value['expr'], tz, now)
@@ -305,18 +303,18 @@ def command_mute(args):
         else:
             mute_tags[tag_key] = None
 
-    for monitor in local_monitors.values():
-        if monitor['mute_when'] and remote_monitors.has_key(monitor['name']):
+    for monitor in list(local_monitors.values()):
+        if monitor['mute_when'] and monitor['name'] in remote_monitors:
             remote = remote_monitors[monitor['name']]
             if remote['is_silenced']:
-                print "Alert '%s' is already muted. Skipping." % monitor['name']
+                print("Alert '%s' is already muted. Skipping." % monitor['name'])
                 continue
             mute_until = mute_tags[monitor['mute_when']]
             if mute_until:
                 id = remote['id']
                 datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
-                print "Muting alert '%s' until %s" % (monitor['name'],
-                                                      mute_until['datetime'])
+                print("Muting alert '%s' until %s" % (monitor['name'],
+                                                      mute_until['datetime']))
 
 
 def command_diff(args):
@@ -332,21 +330,21 @@ def command_diff(args):
 
     if only_local:
         sys.stdout.write(bcolors.WARNING)
-        print '---------------------------------------------------------'
-        print ' NEW MONITORS.  These monitors are currently missing in'
-        print ' datadog and can be pushed using "%s push"' % PROGNAME
-        print '---------------------------------------------------------'
+        print('---------------------------------------------------------')
+        print(' NEW MONITORS.  These monitors are currently missing in')
+        print(' datadog and can be pushed using "%s push"' % PROGNAME)
+        print('---------------------------------------------------------')
         sys.stdout.write(bcolors.ENDC)
         monitors = [local_monitors[name]['obj'] for name in only_local]
-        print _pretty_yaml(monitors)
+        print(_pretty_yaml(monitors))
     if changed:
         sys.stdout.write(bcolors.WARNING)
-        print '---------------------------------------------------------'
-        print ' TO BE UPDATED.  These monitors exist in datadog, but are'
-        print ' different than the local version.  Use "%s push"' % PROGNAME
-        print ' to push them to datadog.'
-        print '---------------------------------------------------------'
-        print
+        print('---------------------------------------------------------')
+        print(' TO BE UPDATED.  These monitors exist in datadog, but are')
+        print(' different than the local version.  Use "%s push"' % PROGNAME)
+        print(' to push them to datadog.')
+        print('---------------------------------------------------------')
+        print()
         sys.stdout.write(bcolors.ENDC)
         for name in changed:
             remote_name = 'datadog:%s' % name
@@ -365,16 +363,16 @@ def command_diff(args):
                     sys.stdout.write(line)
     if only_remote and not args.ignore_untracked:
         sys.stdout.write(bcolors.WARNING)
-        print '------------------------------------------------------------'
-        print ' UNTRACKED MONITORS.  These monitors are only in datadog    '
-        print ' and needed to be MANUALLY added to a local file or removed '
-        print ' from datadog.                                              '
-        print '------------------------------------------------------------'
+        print('------------------------------------------------------------')
+        print(' UNTRACKED MONITORS.  These monitors are only in datadog    ')
+        print(' and needed to be MANUALLY added to a local file or removed ')
+        print(' from datadog.                                              ')
+        print('------------------------------------------------------------')
         sys.stdout.write(bcolors.ENDC)
         monitors = [remote_monitors[name]['obj'] for name in only_remote]
-        print _pretty_yaml(monitors)
+        print(_pretty_yaml(monitors))
         sys.stdout.write(bcolors.FAIL)
-        print "*** FAILED *** Untracked monitors found."
+        print("*** FAILED *** Untracked monitors found.")
         sys.stdout.write(bcolors.ENDC)
     if args.exit_status and any((only_local, changed, only_remote and not args.ignore_untracked)):
         sys.exit(1)
@@ -391,7 +389,6 @@ parser.add_argument('-c', '--config',
                     help='configuration file to load')
 
 subparsers = parser.add_subparsers(help='sub-command help')
-
 
 parser_push = subparsers.add_parser(
     'init', help='Init new alerts file')
@@ -423,15 +420,17 @@ parser_mute = subparsers.add_parser(
     'mute',
     help='Mute alerts based on their `mute_when` key')
 parser_mute.set_defaults(command=command_mute)
-args = parser.parse_args()
 
+args = parser.parse_args()
 
 CONFIG = _load_config(args.config)
 CONFIG_DIR = os.path.abspath(os.path.dirname(args.config))
 
 
 def main():
+    print("ok1")
     datadog.initialize(**CONFIG['datadog'])
+    print("ok2")
     args.command(args)
 
 

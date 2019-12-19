@@ -1,9 +1,9 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 from setuptools import setup
 
 setup(name='DogPush',
-      version='0.3.4',
+      version='0.4.0',
       description='DogPush: manage datadog alerts in local files.',
       author='Nadav S Samet',
       author_email='thesamet@gmail.com',
