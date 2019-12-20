@@ -305,15 +305,24 @@ def command_mute(args):
     for monitor in list(local_monitors.values()):
         if monitor['mute_when'] and monitor['name'] in remote_monitors:
             remote = remote_monitors[monitor['name']]
-            if remote['is_silenced'] == False:
+            if remote['is_silenced'] == True:
                 print("Alert '%s' is already muted. Skipping." % monitor['name'])
                 continue
             mute_until = mute_tags[monitor['mute_when']]
             if mute_until:
                 id = remote['id']
-                datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
-                print("Muting alert '%s' until %s" % (monitor['name'],
-                                                      mute_until['datetime']))
+                try:
+                    datadog.api.Monitor.mute(id, end=mute_until['timestamp'])
+                    print("Muting alert '%s' until %s" % (monitor['name'],
+                                                          mute_until['datetime']))
+                except datadog.api.exceptions.ApiError:
+                    mute_error=sys.exc_info()[1]
+                    mute_error_str=mute_error.args[0]['errors'][0]
+                    if mute_error_str.find('is already muted until'):
+                        print("WARN: Alert '%s' is already muted. Skipping." % monitor['name'])
+                        continue
+                    print("Error muting monitor %s" % mute_error.errors[1] )
+                    break
 
 
 def command_diff(args):
