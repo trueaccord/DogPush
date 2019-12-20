@@ -22,7 +22,6 @@ PROGNAME = 'dogpush'
 class DogPushException(Exception):
     pass
 
-
 def _load_config(config_file):
     with open(config_file, 'r') as f:
         config = yaml.safe_load(f)
@@ -306,7 +305,7 @@ def command_mute(args):
     for monitor in list(local_monitors.values()):
         if monitor['mute_when'] and monitor['name'] in remote_monitors:
             remote = remote_monitors[monitor['name']]
-            if remote['is_silenced']:
+            if remote['is_silenced'] == False:
                 print("Alert '%s' is already muted. Skipping." % monitor['name'])
                 continue
             mute_until = mute_tags[monitor['mute_when']]
@@ -428,9 +427,7 @@ CONFIG_DIR = os.path.abspath(os.path.dirname(args.config))
 
 
 def main():
-    print("ok1")
     datadog.initialize(**CONFIG['datadog'])
-    print("ok2")
     args.command(args)
 
 
