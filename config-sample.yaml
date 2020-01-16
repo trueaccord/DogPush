@@ -19,3 +19,10 @@ mute_tags:
 
 rule_files:
 - rds.yaml
+
+dogpush:
+  yaml_width: 80
+  ignore_prefix: 'string'
+  filter_by_at_mention:
+  - '@victorops-eng'
+  - '@hipchat-Engineering'
