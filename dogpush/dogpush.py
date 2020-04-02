@@ -65,6 +65,7 @@ SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
 IGNORE_FIELDS = ['created_at', 'created', 'modified', 'creator',
                  'org_id', 'overall_state', 'id', 'deleted',
                  'matching_downtimes', 'overall_state_modified',
+                 'restricted_roles',
                  # dogpush specific:
                  'mute_when', 'team', 'severity']
 
