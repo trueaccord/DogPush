@@ -1,3 +1,16 @@
+## Retirement Announcement
+At this point in time, we've decided to retire the DogPush project and place it into maintenance mode,
+and Trueaccord will no longer be managing and maintaining this project.
+
+We'd like to extend a huge thanks and our gratitude to all of the contributors to this project that
+have helped us to get this project to where it is today and for accompanying us on this journey!
+
+If you run into any issues with this project that you believe require attention or wish to enhance
+it, feel free to fork this repository however we may decide to delete this repository at a future
+point in time.
+
+## Original README
+
 # DogPush
 
 DogPush enables to manage your DataDog monitors in YAML files.
@@ -180,9 +193,9 @@ dogpush:
   ignore_prefix: 'string'
 ```
 
-The `yaml_width` option sets the line width of the generated yaml output. 
+The `yaml_width` option sets the line width of the generated yaml output.
 
-Using `ignore_prefix` one can define a set of monitor names that are 
+Using `ignore_prefix` one can define a set of monitor names that are
 simply ignored by DogPush when fetching the remote monitors.
 
 ## Rule files
